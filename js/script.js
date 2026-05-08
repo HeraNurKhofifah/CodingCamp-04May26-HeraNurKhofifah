@@ -206,8 +206,9 @@ $('timer-start').addEventListener('click', () => {
       timerRunning = false;
       $('timer-start').disabled = false;
       setTimerState('finished');
-      setTimerStatus('🎉 Session complete! Time for a break.');
+      setTimerStatus('');
       tryNotify('⏰ Focus session complete!', 'Time to take a break.');
+      openTimerModal();
     }
   }, 1000);
 });
@@ -264,6 +265,39 @@ function tryNotify(title, body) {
   if (!('Notification' in window)) return;
   if (Notification.permission === 'granted') new Notification(title, { body });
 }
+
+/* ── Timer Complete Modal ── */
+function openTimerModal() {
+  $('timer-modal').classList.remove('hidden');
+}
+
+function closeTimerModal() {
+  $('timer-modal').classList.add('hidden');
+}
+
+// Mulai Ulang — reset timer lalu langsung start
+$('timer-modal-restart').addEventListener('click', () => {
+  closeTimerModal();
+  // Reset ke durasi penuh
+  timerLeft = timerTotal;
+  renderTimerDisplay();
+  renderTimerProgress();
+  setTimerState('idle');
+  setTimerStatus('');
+  // Langsung start
+  $('timer-start').click();
+});
+
+// Selesai — tutup modal, timer tetap di 00:00
+$('timer-modal-done').addEventListener('click', () => {
+  closeTimerModal();
+  setTimerStatus('Great work! See you next session. 💪');
+});
+
+// Tutup jika klik backdrop
+$('timer-modal').addEventListener('click', (e) => {
+  if (e.target === $('timer-modal')) closeTimerModal();
+});
 
 document.addEventListener('click', () => {
   if ('Notification' in window && Notification.permission === 'default') {

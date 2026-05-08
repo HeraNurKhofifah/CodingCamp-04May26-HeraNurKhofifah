@@ -723,3 +723,69 @@ body {
   padding: 20px 0 8px;
   font-style: italic;
 }
+
+/* ══════════════════════════════════════════════════════
+   TIMER COMPLETE MODAL
+   ══════════════════════════════════════════════════════ */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 400;
+  padding: 24px;
+  backdrop-filter: blur(6px);
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: var(--shadow-lg);
+  animation: scaleIn 0.25s ease;
+}
+
+.timer-modal-box {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.timer-modal-icon {
+  font-size: 3rem;
+  animation: slideDown 0.3s ease 0.1s both;
+}
+
+.timer-modal-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text);
+  animation: slideDown 0.3s ease 0.15s both;
+}
+
+.timer-modal-msg {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  animation: slideDown 0.3s ease 0.2s both;
+}
+
+.timer-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+  animation: slideUp 0.3s ease 0.25s both;
+}
+
+.timer-modal-actions .btn {
+  flex: 1;
+  justify-content: center;
+}

@@ -52,7 +52,20 @@
       </div>
     </header>
 
-    <!-- ── Main Content ── -->
+    <!-- ── Timer Complete Modal ── -->
+  <div id="timer-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="timer-modal-title">
+    <div class="modal-box timer-modal-box">
+      <div class="timer-modal-icon">🎉</div>
+      <h3 id="timer-modal-title" class="timer-modal-title">Session Complete!</h3>
+      <p class="timer-modal-msg">Time for a break. You've earned it!</p>
+      <div class="timer-modal-actions">
+        <button id="timer-modal-restart" class="btn btn-primary">▶ Mulai Ulang</button>
+        <button id="timer-modal-done"    class="btn btn-secondary">✓ Selesai</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main Content ── -->
     <main class="container">
 
       <!-- Greeting -->
