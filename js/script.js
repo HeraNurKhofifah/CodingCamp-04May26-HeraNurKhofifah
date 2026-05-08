@@ -1,27 +1,25 @@
 /* ============================================================
-   Life Dashboard — app.js
-   Single JS file (Folder Rule: only 1 JS file)
+   Life Dashboard — script.js
+   Tahap 2: Logika JavaScript (Data & Interaksi)
 
-   Features:
-   ✅ Clock & Date (real-time)
-   ✅ Greeting (time-based, custom name)
-   ✅ Focus Timer (start/pause/reset, custom duration, progress bar)
-   ✅ To-Do List (add/edit/done/delete, sort, prevent duplicates)
-   ✅ Quick Links (add/delete, localStorage)
-   ✅ Light / Dark Mode
-   ✅ All data persisted in localStorage
+   Fitur:
+   1. Onboarding  — cek username di localStorage
+   2. Clock & Greeting — real-time, berubah sesuai waktu
+   3. To-Do List  — CRUD, localStorage, duplicate check, sort
+   4. Focus Timer — 25 menit, Start/Pause/Reset, custom durasi
+   5. Quick Links — tambah & hapus, localStorage
+   6. Dark Mode   — toggle + simpan ke localStorage
    ============================================================ */
 
 'use strict';
 
-/* ── Utility helpers ─────────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────── */
 const $  = (id) => document.getElementById(id);
 const pad = (n) => String(n).padStart(2, '0');
 
-function saveLS(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* quota */ }
+function saveLS(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* quota */ }
 }
-
 function loadLS(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -30,11 +28,88 @@ function loadLS(key, fallback) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   1. CLOCK & DATE
+   1. ONBOARDING — Cek username saat halaman dimuat
+   ══════════════════════════════════════════════════════════ */
+let username = loadLS('username', '');
+
+function initApp() {
+  if (username) {
+    showDashboard(false); // langsung tampil tanpa animasi onboarding
+  } else {
+    showOnboarding();
+  }
+}
+
+function showOnboarding() {
+  $('onboarding-overlay').classList.remove('hidden');
+  $('main-dashboard').classList.add('hidden');
+  setTimeout(() => $('onboarding-name-input').focus(), 100);
+}
+
+function showDashboard(animate = true) {
+  const overlay = $('onboarding-overlay');
+  const dash    = $('main-dashboard');
+
+  if (animate) {
+    // Animasi fade-out overlay lalu fade-in dashboard
+    overlay.classList.add('fade-out');
+    setTimeout(() => {
+      overlay.classList.add('hidden');
+      overlay.classList.remove('fade-out');
+      dash.classList.remove('hidden');
+      dash.classList.add('fade-in');
+      setTimeout(() => dash.classList.remove('fade-in'), 500);
+    }, 400);
+  } else {
+    overlay.classList.add('hidden');
+    dash.classList.remove('hidden');
+  }
+
+  renderGreeting();
+  startClock();
+}
+
+/* Submit onboarding */
+$('onboarding-submit').addEventListener('click', submitOnboarding);
+$('onboarding-name-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') submitOnboarding();
+});
+
+function submitOnboarding() {
+  const val = $('onboarding-name-input').value.trim();
+  if (!val) {
+    $('onboarding-error').textContent = 'Please enter your name to continue.';
+    $('onboarding-name-input').focus();
+    return;
+  }
+  $('onboarding-error').textContent = '';
+  username = val;
+  saveLS('username', username);
+  showDashboard(true);
+}
+
+/* Change name (dari dashboard) */
+$('change-name-btn').addEventListener('click', () => {
+  const newName = prompt('Enter your new name:', username);
+  if (newName === null) return; // cancelled
+  const trimmed = newName.trim();
+  if (!trimmed) return;
+  username = trimmed;
+  saveLS('username', username);
+  renderGreeting();
+});
+
+/* ══════════════════════════════════════════════════════════
+   2. REAL-TIME CLOCK & GREETING
    ══════════════════════════════════════════════════════════ */
 const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 const MONTHS = ['January','February','March','April','May','June',
                 'July','August','September','October','November','December'];
+
+function startClock() {
+  updateClock();
+  setInterval(updateClock, 1000);
+}
 
 function updateClock() {
   const now = new Date();
@@ -44,69 +119,25 @@ function updateClock() {
     `${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
 }
 
-setInterval(updateClock, 1000);
-updateClock();
-
-/* ══════════════════════════════════════════════════════════
-   2. GREETING + CUSTOM NAME  (Challenge ✅)
-   ══════════════════════════════════════════════════════════ */
-let userName = loadLS('ls_name', '');
-
 function getGreetingWord() {
   const h = new Date().getHours();
-  if (h <  5) return 'Good night';
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  if (h < 21) return 'Good evening';
-  return 'Good night';
+  if (h >= 5  && h < 12) return { word: 'Good Morning',   emoji: '☀️' };
+  if (h >= 12 && h < 17) return { word: 'Good Afternoon', emoji: '🌤️' };
+  if (h >= 17 && h < 21) return { word: 'Good Evening',   emoji: '🌆' };
+  return                         { word: 'Good Night',     emoji: '🌙' };
 }
 
 function renderGreeting() {
-  const word = getGreetingWord();
-  if (userName) {
-    $('greeting-text').textContent = `${word},`;
-    $('greeting-name').textContent = `${userName} 👋`;
-  } else {
-    $('greeting-text').textContent = `${word}!`;
-    $('greeting-name').textContent = '';
-  }
+  const { word, emoji } = getGreetingWord();
+  $('greeting-label').textContent = `${emoji} ${word},`;
+  $('greeting-name').textContent  = username;
 }
 
-renderGreeting();
-setInterval(renderGreeting, 60_000); // refresh every minute
-
-/* Name modal */
-$('edit-name-btn').addEventListener('click', openNameModal);
-$('save-name-btn').addEventListener('click', saveName);
-$('cancel-name-btn').addEventListener('click', closeNameModal);
-$('name-input').addEventListener('keydown', (e) => {
-  if (e.key === 'Enter')  saveName();
-  if (e.key === 'Escape') closeNameModal();
-});
-// Close on backdrop click
-$('name-modal').addEventListener('click', (e) => {
-  if (e.target === $('name-modal')) closeNameModal();
-});
-
-function openNameModal() {
-  $('name-input').value = userName;
-  $('name-modal').classList.remove('hidden');
-  $('name-input').focus();
-}
-
-function closeNameModal() {
-  $('name-modal').classList.add('hidden');
-}
-
-function saveName() {
-  userName = $('name-input').value.trim();
-  saveLS('ls_name', userName);
-  renderGreeting();
-  closeNameModal();
-}
+// Refresh greeting setiap menit (waktu bisa berubah)
+setInterval(() => { if (username) renderGreeting(); }, 60_000);
 
 /* ══════════════════════════════════════════════════════════
-   3. DARK / LIGHT MODE  (Challenge ✅)
+   3. DARK / LIGHT MODE
    ══════════════════════════════════════════════════════════ */
 let isDark = loadLS('ls_theme', false);
 
@@ -116,7 +147,7 @@ function applyTheme() {
   $('theme-toggle').title = isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
 }
 
-applyTheme();
+applyTheme(); // terapkan saat load
 
 $('theme-toggle').addEventListener('click', () => {
   isDark = !isDark;
@@ -125,10 +156,10 @@ $('theme-toggle').addEventListener('click', () => {
 });
 
 /* ══════════════════════════════════════════════════════════
-   4. FOCUS TIMER  (Challenge: Change Pomodoro time ✅)
+   4. FOCUS TIMER
    ══════════════════════════════════════════════════════════ */
-let timerDuration = loadLS('ls_timer_duration', 25); // minutes
-let timerTotal    = timerDuration * 60;              // seconds
+let timerDuration = loadLS('ls_timer_min', 25); // menit
+let timerTotal    = timerDuration * 60;
 let timerLeft     = timerTotal;
 let timerInterval = null;
 let timerRunning  = false;
@@ -136,7 +167,8 @@ let timerRunning  = false;
 $('timer-minutes').value = timerDuration;
 
 function renderTimerDisplay() {
-  $('timer-display').textContent = `${pad(Math.floor(timerLeft / 60))}:${pad(timerLeft % 60)}`;
+  $('timer-display').textContent =
+    `${pad(Math.floor(timerLeft / 60))}:${pad(timerLeft % 60)}`;
 }
 
 function renderTimerProgress() {
@@ -144,43 +176,38 @@ function renderTimerProgress() {
   $('timer-progress').style.width = `${pct}%`;
 }
 
-function setTimerVisualState(state) {
-  // state: 'idle' | 'running' | 'finished'
+function setTimerState(state) {
   $('timer-display').classList.remove('running', 'finished');
-  if (state !== 'idle') $('timer-display').classList.add(state);
+  if (state === 'running' || state === 'finished') {
+    $('timer-display').classList.add(state);
+  }
 }
 
-function setTimerStatus(msg) {
-  $('timer-status').textContent = msg;
-}
+function setTimerStatus(msg) { $('timer-status').textContent = msg; }
 
 renderTimerDisplay();
 renderTimerProgress();
 
-/* Start / Pause */
+/* Start */
 $('timer-start').addEventListener('click', () => {
   if (timerRunning) return;
-  if (timerLeft === 0) {
-    timerLeft = timerTotal; // auto-restart if finished
-    renderTimerProgress();
-  }
+  if (timerLeft === 0) { timerLeft = timerTotal; renderTimerProgress(); }
   timerRunning = true;
-  setTimerVisualState('running');
-  setTimerStatus('Focus session in progress…');
   $('timer-start').disabled = true;
+  setTimerState('running');
+  setTimerStatus('Focus session in progress…');
 
   timerInterval = setInterval(() => {
     timerLeft--;
     renderTimerDisplay();
     renderTimerProgress();
-
     if (timerLeft <= 0) {
       clearInterval(timerInterval);
       timerRunning = false;
       $('timer-start').disabled = false;
-      setTimerVisualState('finished');
-      setTimerStatus('🎉 Session complete! Take a break.');
-      notifyUser('⏰ Focus session complete!', 'Time to take a break.');
+      setTimerState('finished');
+      setTimerStatus('🎉 Session complete! Time for a break.');
+      tryNotify('⏰ Focus session complete!', 'Time to take a break.');
     }
   }, 1000);
 });
@@ -191,7 +218,7 @@ $('timer-stop').addEventListener('click', () => {
   clearInterval(timerInterval);
   timerRunning = false;
   $('timer-start').disabled = false;
-  setTimerVisualState('idle');
+  setTimerState('idle');
   setTimerStatus('Paused.');
 });
 
@@ -203,7 +230,7 @@ $('timer-reset').addEventListener('click', () => {
   timerLeft = timerTotal;
   renderTimerDisplay();
   renderTimerProgress();
-  setTimerVisualState('idle');
+  setTimerState('idle');
   setTimerStatus('');
 });
 
@@ -226,22 +253,18 @@ function applyCustomDuration() {
   timerDuration = val;
   timerTotal    = val * 60;
   timerLeft     = timerTotal;
-  saveLS('ls_timer_duration', timerDuration);
+  saveLS('ls_timer_min', timerDuration);
   renderTimerDisplay();
   renderTimerProgress();
-  setTimerVisualState('idle');
+  setTimerState('idle');
   setTimerStatus(`Timer set to ${val} minute${val > 1 ? 's' : ''}.`);
 }
 
-/* Browser notification helper */
-function notifyUser(title, body) {
+function tryNotify(title, body) {
   if (!('Notification' in window)) return;
-  if (Notification.permission === 'granted') {
-    new Notification(title, { body });
-  }
+  if (Notification.permission === 'granted') new Notification(title, { body });
 }
 
-// Request permission on first user interaction
 document.addEventListener('click', () => {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
@@ -250,9 +273,12 @@ document.addEventListener('click', () => {
 
 /* ══════════════════════════════════════════════════════════
    5. TO-DO LIST
-      Challenges: Prevent duplicates ✅ | Sort tasks ✅
+      - CRUD (tambah, edit, hapus, centang)
+      - localStorage
+      - Prevent Duplicate
+      - Sort (done otomatis ke bawah + manual sort)
    ══════════════════════════════════════════════════════════ */
-let todos  = loadLS('ls_todos', []);       // [{id, text, done, createdAt}]
+let todos  = loadLS('ls_todos', []);   // [{id, text, done, createdAt}]
 let todoId = loadLS('ls_todos_id', 1);
 
 function saveTodos() {
@@ -260,15 +286,21 @@ function saveTodos() {
   saveLS('ls_todos_id', todoId);
 }
 
-/* ── Sort ── */
+/* ── Sort logic ── */
 function getSortedTodos() {
   const mode = $('todo-sort').value;
   const copy = [...todos];
   switch (mode) {
     case 'az':   return copy.sort((a, b) => a.text.localeCompare(b.text));
     case 'za':   return copy.sort((a, b) => b.text.localeCompare(a.text));
+    // "done last" = tugas selesai otomatis ke bawah
     case 'done': return copy.sort((a, b) => Number(a.done) - Number(b.done));
-    default:     return copy; // insertion order
+    default:
+      // Default: undone dulu, lalu done — sesuai waktu dibuat
+      return copy.sort((a, b) => {
+        if (a.done !== b.done) return Number(a.done) - Number(b.done);
+        return a.createdAt - b.createdAt;
+      });
   }
 }
 
@@ -283,7 +315,7 @@ function renderTodos() {
   const total  = todos.length;
   const done   = todos.filter(t => t.done).length;
 
-  count.textContent = total === 0 ? '' : `${done}/${total} done`;
+  count.textContent  = total > 0 ? `${done}/${total} done` : '';
   empty.style.display = total === 0 ? 'block' : 'none';
 
   sorted.forEach((todo) => {
@@ -299,26 +331,26 @@ function renderTodos() {
     cb.setAttribute('aria-label', `Mark "${todo.text}" as done`);
     cb.addEventListener('change', () => toggleTodo(todo.id));
 
-    // Text span
+    // Text
     const span = document.createElement('span');
     span.className = 'todo-text';
     span.textContent = todo.text;
 
-    // Action buttons
+    // Actions
     const actions = document.createElement('div');
     actions.className = 'todo-actions';
 
     const editBtn = document.createElement('button');
-    editBtn.textContent = '✏️';
+    editBtn.innerHTML = '✏️';
     editBtn.title = 'Edit task';
-    editBtn.setAttribute('aria-label', `Edit task: ${todo.text}`);
+    editBtn.setAttribute('aria-label', `Edit: ${todo.text}`);
     editBtn.addEventListener('click', () => startEditTodo(todo.id, li, span));
 
     const delBtn = document.createElement('button');
-    delBtn.textContent = '🗑️';
+    delBtn.innerHTML = '🗑️';
     delBtn.className = 'btn-delete';
     delBtn.title = 'Delete task';
-    delBtn.setAttribute('aria-label', `Delete task: ${todo.text}`);
+    delBtn.setAttribute('aria-label', `Delete: ${todo.text}`);
     delBtn.addEventListener('click', () => deleteTodo(todo.id));
 
     actions.append(editBtn, delBtn);
@@ -333,9 +365,9 @@ function addTodo() {
   const text  = input.value.trim();
   if (!text) { input.focus(); return; }
 
-  // Prevent duplicates (Challenge ✅)
+  // Prevent Duplicate
   if (isDuplicateTodo(text)) {
-    showTodoWarning('⚠️ This task already exists!');
+    showTodoWarning('⚠️ Task already exists!');
     input.select();
     return;
   }
@@ -349,16 +381,12 @@ function addTodo() {
 
 function isDuplicateTodo(text, excludeId = null) {
   return todos.some(
-    (t) => t.id !== excludeId && t.text.toLowerCase() === text.toLowerCase()
+    t => t.id !== excludeId && t.text.toLowerCase() === text.toLowerCase()
   );
 }
 
-function showTodoWarning(msg) {
-  $('duplicate-warning').textContent = msg;
-}
-function hideTodoWarning() {
-  $('duplicate-warning').textContent = '';
-}
+function showTodoWarning(msg) { $('todo-warning').textContent = msg; }
+function hideTodoWarning()    { $('todo-warning').textContent = ''; }
 
 /* ── Toggle done ── */
 function toggleTodo(id) {
@@ -373,7 +401,7 @@ function deleteTodo(id) {
   renderTodos();
 }
 
-/* ── Inline edit ── */
+/* ── Inline Edit ── */
 function startEditTodo(id, li, span) {
   const todo = todos.find(t => t.id === id);
   if (!todo) return;
@@ -392,16 +420,12 @@ function startEditTodo(id, li, span) {
   function commitEdit() {
     if (committed) return;
     committed = true;
-
     const newText = editInput.value.trim();
-    if (!newText) {
-      li.replaceChild(span, editInput);
-      return;
-    }
+    if (!newText) { li.replaceChild(span, editInput); return; }
     if (isDuplicateTodo(newText, id)) {
-      editInput.style.borderColor = 'var(--danger)';
+      editInput.classList.add('input-error');
       editInput.title = '⚠️ Duplicate task!';
-      committed = false; // allow retry
+      committed = false;
       editInput.focus();
       return;
     }
@@ -410,7 +434,7 @@ function startEditTodo(id, li, span) {
     renderTodos();
   }
 
-  editInput.addEventListener('blur',    commitEdit);
+  editInput.addEventListener('blur', commitEdit);
   editInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter')  { e.preventDefault(); commitEdit(); }
     if (e.key === 'Escape') { committed = true; li.replaceChild(span, editInput); }
@@ -423,8 +447,6 @@ $('todo-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') addT
 $('todo-input').addEventListener('input',   hideTodoWarning);
 $('todo-sort').addEventListener('change',   renderTodos);
 
-renderTodos();
-
 /* ══════════════════════════════════════════════════════════
    6. QUICK LINKS
    ══════════════════════════════════════════════════════════ */
@@ -436,7 +458,6 @@ function saveLinks() {
   saveLS('ls_links_id', linkId);
 }
 
-/* ── Render ── */
 function renderLinks() {
   const grid  = $('links-grid');
   const empty = $('links-empty');
@@ -453,49 +474,46 @@ function renderLinks() {
     chip.rel    = 'noopener noreferrer';
     chip.title  = link.url;
 
-    const label = document.createElement('span');
-    label.className   = 'link-label';
-    label.textContent = link.label;
+    const labelEl = document.createElement('span');
+    labelEl.className   = 'link-label';
+    labelEl.textContent = link.label;
 
-    const del = document.createElement('button');
-    del.className = 'link-delete';
-    del.textContent = '✕';
-    del.title = `Remove ${link.label}`;
-    del.setAttribute('aria-label', `Remove link: ${link.label}`);
-    del.addEventListener('click', (e) => {
+    const delBtn = document.createElement('button');
+    delBtn.className   = 'link-delete';
+    delBtn.textContent = '✕';
+    delBtn.title = `Remove ${link.label}`;
+    delBtn.setAttribute('aria-label', `Remove link: ${link.label}`);
+    delBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       deleteLink(link.id);
     });
 
-    chip.append(label, del);
+    chip.append(labelEl, delBtn);
     grid.appendChild(chip);
   });
 }
 
-/* ── Add ── */
 function addLink() {
-  const labelEl = $('link-name-input');
+  const labelEl = $('link-label-input');
   const urlEl   = $('link-url-input');
   const label   = labelEl.value.trim();
   let   url     = urlEl.value.trim();
 
   if (!label || !url) {
-    showLinkError('Please fill in both label and URL.');
+    showLinkWarning('Please fill in both label and URL.');
     return;
   }
 
-  // Auto-prepend https:// if missing
   if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
 
-  // Validate URL
   try { new URL(url); } catch {
-    showLinkError('Please enter a valid URL.');
+    showLinkWarning('Please enter a valid URL.');
     urlEl.focus();
     return;
   }
 
-  hideLinkError();
+  hideLinkWarning();
   links.push({ id: linkId++, label, url });
   saveLinks();
   labelEl.value = '';
@@ -509,14 +527,18 @@ function deleteLink(id) {
   renderLinks();
 }
 
-function showLinkError(msg) { $('link-error').textContent = msg; }
-function hideLinkError()    { $('link-error').textContent = ''; }
+function showLinkWarning(msg) { $('link-warning').textContent = msg; }
+function hideLinkWarning()    { $('link-warning').textContent = ''; }
 
-/* ── Event listeners ── */
 $('link-add-btn').addEventListener('click', addLink);
 $('link-url-input').addEventListener('keydown',  (e) => { if (e.key === 'Enter') addLink(); });
-$('link-name-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('link-url-input').focus(); });
-$('link-url-input').addEventListener('input',    hideLinkError);
-$('link-name-input').addEventListener('input',   hideLinkError);
+$('link-label-input').addEventListener('keydown',(e) => { if (e.key === 'Enter') $('link-url-input').focus(); });
+$('link-url-input').addEventListener('input',    hideLinkWarning);
+$('link-label-input').addEventListener('input',  hideLinkWarning);
 
+/* ══════════════════════════════════════════════════════════
+   INIT — Jalankan saat halaman dimuat
+   ══════════════════════════════════════════════════════════ */
+renderTodos();
 renderLinks();
+initApp();
